@@ -8,23 +8,33 @@ class Hl7Helper
 
 
 	var $_hl7Globals = array();
+	public $fileName;
 
 
-	function __construct(){
+	function __construct($fName = FALSE){
 
-		$this->_hl7Globals['SEGMENT_SEPARATOR'] = '\015';
-		$this->_hl7Globals['FIELD_SEPARATOR'] = '|';
+		$this->_hl7Globals['SEGMENT_SEPARATOR'] = "\015";
+		$this->_hl7Globals['FIELD_SEPARATOR'] = "|";
 		$this->_hl7Globals['NULL'] = '""';
-		$this->_hl7Globals['COMPONENT_SEPARATOR'] = '^';
-		$this->_hl7Globals['REPETITION_SEPARATOR'] = '~';
-		$this->_hl7Globals['ESCAPE_CHARACTER'] = '\\';
-		$this->_hl7Globals['SUBCOMPONENT_SEPARATOR'] = '&';
-		$this->_hl7Globals['HL7_VERSION'] = '2.3';
+		$this->_hl7Globals['COMPONENT_SEPARATOR'] = "^";
+		$this->_hl7Globals['REPETITION_SEPARATOR'] = "~";
+		$this->_hl7Globals['ESCAPE_CHARACTER'] = "\\";
+		$this->_hl7Globals['SUBCOMPONENT_SEPARATOR'] = "&";
+		$this->_hl7Globals['HL7_VERSION'] = "2.3";
 		$this->_hl7Globals['MLLP_PREFIX'] = chr(11);
 		$this->_hl7Globals['MLLP_SUFFIX'] = chr(28) . chr(13);
 
-	}
+		if ($fName) {
+			$this->fileName = $fName;
+		}
 
+	}
+	/**
+	 *  Cleans the suffix and prefix from the hl7
+	 *  file (if they exist)
+	 *
+	 * @access public
+	 */
 	public function cleanup($msg) {
 
 		$msg = str_replace($this->_hl7Globals['MLLP_PREFIX'], "", $msg);
@@ -32,42 +42,53 @@ class Hl7Helper
 
 		return $msg;
 	}
-
+	/**
+	 *  Verifies validity of hl7 file
+	 *
+	 * @access public
+	 */
 	public function isValid($msg) {
+
 
 		if (strlen($msg) < 4) {
 	
 			return FALSE;
 	
-		} elseif (!strpos($msg, "MSH") === 0) {
+		} elseif (strpos($msg, "MSH") != 0) {
 	
 			return FALSE;
 	
 		}
 
+
 		return TRUE;
 	}
+	/**
+	 * Get unique value. Grabs the specified 
+	 * value from the hl7 formatted file
+	 *
+	 * @access public
+	 */
+	public function getValue($msg, $segmentName, $fieldId = FALSE, $componentId = FALSE, $subcomponentId = FALSE, $test = TRUE) {
 
-	public function getValue($msg, $segmentName, $fieldId = FALSE, $componentId = FALSE, $subcomponentId = FALSE) {
-
-		$segments = split($this->_hl7Globals['SEGMENT_SEPARATOR'], $msg);
+		$segments = explode($this->_hl7Globals['SEGMENT_SEPARATOR'], $msg);
 
 		foreach ($segments as $segment) {
 
 			if (substr($segment, 0, 3) == $segmentName) {
 				
 				if ($fieldId) {
-					
-					$fields = split($this->_hl7Globals['FIELD_SEPARATOR'], $segment);
+
+					$fields = explode($this->_hl7Globals['FIELD_SEPARATOR'], $segment);
 
 					if ($componentId) {
 
-						$components = split($this->_hl7Globals['COMPONENT_SEPARATOR'], $fields[$fieldId]);
-
+						$components = explode($this->_hl7Globals['COMPONENT_SEPARATOR'], $fields[$fieldId]);
+	
 						if($subcomponentId) {
 
-							$subcomponents = split($this->_hl7Globals['SUBCOMPONENT_SEPARATOR'], $components[$componentId - 1]);
-
+							$subcomponents = explode($this->_hl7Globals['SUBCOMPONENT_SEPARATOR'], $components[$componentId - 1]);
+	
 							return $subcomponents[$subcomponentId - 1];
 				
 						} else {
@@ -77,7 +98,11 @@ class Hl7Helper
 
 					} else {
 
-						return $fields[$fieldId - 1];
+						if ($segmentName == 'MSH') {  //Different than other lines
+							return $fields[$fieldId - 1];
+						}
+
+						return $fields[$fieldId];
 							
 					}
 
@@ -86,6 +111,10 @@ class Hl7Helper
 					return $segment;
 
 				}
+
+			} else {
+
+				//return 'segmentnamemismatch';
 
 			}
 
